@@ -8,5 +8,3 @@ If (!(Test-Path $RegPath)) {
 
 # Step 3: Set the 'EnableMulticast' value to 0 (disable LLMNR)
 New-ItemProperty -Path $RegPath -Name "EnableMulticast" -Value 0 -PropertyType DWORD -Force | Out-Null
-
-#
