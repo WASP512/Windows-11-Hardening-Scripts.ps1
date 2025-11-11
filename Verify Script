@@ -1,2 +1,0 @@
-(Get-ItemProperty -Path $RegPath -Name EnableMulticast).EnableMulticast
-#This should return 0, confirming LLMNR is disabled
