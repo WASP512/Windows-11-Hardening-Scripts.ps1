@@ -19,3 +19,4 @@ Set-WebConfigurationProperty -PSPath "IIS:\Sites\$ftpSiteName" `
 Set-WebConfigurationProperty -PSPath "IIS:\Sites\$ftpSiteName" `
   -Filter "system.webServer/security/authentication/basicAuthentication" `
   -Name "enabled" -Value $true
+
