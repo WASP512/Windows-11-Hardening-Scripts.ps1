@@ -9,3 +9,4 @@ foreach ($adapter in $adapters) {
 # Step 3: OPTIONAL - Also disable IPv6 at the system level for extra protection (requires reboot)
 New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters" `
 -Name "DisabledComponents" -PropertyType DWord -Value 0xFF -Force | Out-Null
+
