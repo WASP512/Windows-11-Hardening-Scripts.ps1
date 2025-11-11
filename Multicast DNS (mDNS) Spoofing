@@ -10,3 +10,4 @@ If (!(Test-Path $RegPath)) {
 
 # Step 3: Set the 'EnableMDNS' registry value to 0 (disable mDNS)
 New-ItemProperty -Path $RegPath -Name $Name -Value $Value -PropertyType DWORD -Force | Out-Null
+#
