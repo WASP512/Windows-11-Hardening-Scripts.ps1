@@ -1,17 +1,37 @@
-# Define the FTP service name
-$ServiceName = "FTPSVC"
+<#
+.SYNOPSIS
+    Stops and disables the IIS FTP service (FTPSVC).
 
-# Check if the FTP service is installed
-if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
-    # Stop the FTP service if it's running
-    Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
+.NOTES
+    Reboot: No
+    Run with -WhatIf to see what would change without changing anything.
+#>
+#Requires -RunAsAdministrator
+[CmdletBinding(SupportsShouldProcess)]
+param()
 
-    # Disable the FTP service from starting automatically
-    Set-Service -Name $ServiceName -StartupType Disabled
+$ErrorActionPreference = 'Stop'
+$ServiceName = 'FTPSVC'
 
-    # Optionally, output a confirmation message (comment out for complete silence)
-    # Write-Output "FTP service has been stopped and disabled."
-} else {
-    # FTP service not found; optionally handle this case silently
-    # Write-Output "FTP service is not installed."
+try {
+    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    if (-not $service) {
+        Write-Output "[OK] FTP service is not installed."
+        exit 0
+    }
+
+    if ($service.StartType -eq 'Disabled' -and $service.Status -eq 'Stopped') {
+        Write-Output "[OK] FTP service is already stopped and disabled."
+        exit 0
+    }
+
+    if ($PSCmdlet.ShouldProcess($ServiceName, 'Stop and disable service')) {
+        Stop-Service -Name $ServiceName -Force
+        Set-Service -Name $ServiceName -StartupType Disabled
+        Write-Output "[CHANGED] FTP service stopped and disabled."
+    }
+    exit 0
+} catch {
+    Write-Output "[FAIL] FTP service: $($_.Exception.Message)"
+    exit 1
 }

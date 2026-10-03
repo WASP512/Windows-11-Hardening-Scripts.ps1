@@ -1,32 +1,47 @@
-# Disable Telnet Client - Desktop & Server
-# Production-ready for Datto RMM (SYSTEM) or manual execution as Administrator
+<#
+.SYNOPSIS
+    Removes the Telnet client on Windows desktops and servers.
 
-if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Warning "Please run this script as an Administrator!"
-    break
-}
+.DESCRIPTION
+    Removes TelnetClient on desktops and Telnet-Client on servers.
+    Invoke-FleetHardening.ps1 includes this step.
 
-$OSCaption = (Get-CimInstance Win32_OperatingSystem).Caption
-Write-Host "Running on: $OSCaption" -ForegroundColor Cyan
+.NOTES
+    Reboot: Only if Windows reports one is needed.
+    Run with -WhatIf to see what would change without changing anything.
+#>
+#Requires -RunAsAdministrator
+[CmdletBinding(SupportsShouldProcess)]
+param()
+
+$ErrorActionPreference = 'Stop'
+$IsServer = (Get-CimInstance Win32_OperatingSystem).ProductType -ne 1
+$RestartNeeded = $false
 
 try {
-    if ($OSCaption -match "Server") {
-        $Feature = Get-WindowsFeature -Name Telnet-Client -ErrorAction SilentlyContinue
-        if ($Feature.Installed) {
-            Remove-WindowsFeature -Name Telnet-Client -Confirm:$false | Out-Null
-            Write-Output "[SUCCESS] Telnet-Client removed from Server."
-        } else {
-            Write-Output "[INFO] Telnet-Client not installed."
+    if ($IsServer) {
+        $feature = Get-WindowsFeature -Name Telnet-Client
+        if (-not $feature -or -not $feature.Installed) {
+            Write-Output "[OK] Telnet-Client is not installed."
+        } elseif ($PSCmdlet.ShouldProcess('Telnet-Client', 'Uninstall Windows feature')) {
+            $result = Uninstall-WindowsFeature -Name Telnet-Client
+            if ("$($result.RestartNeeded)" -ne 'No') { $RestartNeeded = $true }
+            Write-Output "[CHANGED] Telnet-Client removed."
         }
     } else {
-        $Feature = Get-WindowsOptionalFeature -Online -FeatureName TelnetClient -ErrorAction SilentlyContinue
-        if ($Feature.State -eq "Enabled") {
-            Disable-WindowsOptionalFeature -Online -FeatureName TelnetClient -NoRestart | Out-Null
-            Write-Output "[SUCCESS] TelnetClient disabled on Desktop."
-        } else {
-            Write-Output "[INFO] TelnetClient already disabled."
+        $feature = Get-WindowsOptionalFeature -Online | Where-Object FeatureName -eq 'TelnetClient'
+        if (-not $feature -or $feature.State -notin 'Enabled', 'EnablePending') {
+            Write-Output "[OK] TelnetClient is not enabled."
+        } elseif ($PSCmdlet.ShouldProcess('TelnetClient', 'Disable Windows optional feature')) {
+            $result = Disable-WindowsOptionalFeature -Online -FeatureName TelnetClient -NoRestart
+            if ($result.RestartNeeded) { $RestartNeeded = $true }
+            Write-Output "[CHANGED] TelnetClient disabled."
         }
     }
+
+    if ($RestartNeeded) { Write-Output "[ACTION] Reboot required to finish removing the Telnet client." }
+    exit 0
 } catch {
-    Write-Error "Critical Failure: $($_.Exception.Message)"
+    Write-Output "[FAIL] Telnet: $($_.Exception.Message)"
+    exit 1
 }
